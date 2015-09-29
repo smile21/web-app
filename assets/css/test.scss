@@ -1,0 +1,22 @@
+ul {
+	margin: 100px auto 0;
+	list-style: none;
+	width: 700px;
+	font: 30px helvetica;
+	font-weight: 200;
+}
+
+.main-container {
+  width: 400px;
+  margin: auto;
+  //border: 1px solid #000000;
+  .my-test {
+    height: 200px;
+    background-color: #000088;
+    color: #FFFFFF;
+    margin: 10px;
+    width: 200px;
+    //float: left;
+  }
+}
+
