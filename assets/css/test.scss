@@ -7,16 +7,12 @@ ul {
 }
 
 .main-container {
-  width: 400px;
+  //background-color: #FF0088;
+  width: 100px;
   margin: auto;
-  //border: 1px solid #000000;
-  .my-test {
-    height: 200px;
-    background-color: #000088;
-    color: #FFFFFF;
-    margin: 10px;
-    width: 200px;
-    //float: left;
+  img {
+    height: 80px;
+    margin-top: 50px;
   }
 }
 

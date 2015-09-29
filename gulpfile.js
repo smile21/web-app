@@ -5,6 +5,7 @@ var gulp = require('gulp');
 // var uglify = require('gulp-uglify');
 // var imagemin = require('gulp-imagemin');
 // var sourcemaps = require('gulp-sourcemaps');
+var gutil = require("gulp-util");
 var RevAll = require('gulp-rev-all');
 var sass = require('gulp-sass');
 var babel = require('gulp-babel');
@@ -13,7 +14,39 @@ var clean = require('gulp-clean');
 var useref = require('gulp-useref');
 var bsync = require('browser-sync').create();
 // var watch = require('gulp-watch');
+var webpack = require('webpack');
+var WebpackDevServer = require('webpack-dev-server');
 var path = require('path');
+
+var webpackConfig = {
+  entry: __dirname + '/assets/js/app.js',
+  output: {
+    path: __dirname + '/tmp',
+    filename: 'js/bundle.js'
+  },
+  module: {
+    loaders: [
+      {test: /\.scss$/, loader: 'style-loader!css-loader!sass-loader'},
+      {test: /\.(png|jpg)$/, loader: 'url-loader?limit=4096&name=img/[name].[ext]'},
+      {
+        test: /\.jsx?$/,
+        loader: 'babel',
+        exclude: /node_modules/,
+        query: {
+          blacklist: ['regenerator', 'es6.templateLiterals'],
+          optional: ['asyncToGenerator']
+        }
+      },
+    ]
+  },
+  plugins: [
+    new webpack.ProvidePlugin({
+      $: "jquery",
+      jQuery: "jquery",
+      "window.jQuery": "jquery"
+    })
+  ]
+};
 
 var paths = {
   appScripts: ['./src/**/*.js'],
@@ -27,6 +60,28 @@ gulp.task('clean', function () {
     .pipe(clean({force: true}));
 });
 
+gulp.task('webpack:build', function (cb) {
+  webpack(webpackConfig, function (err, stats) {
+    if(err) throw new gutil.PluginError("webpack", err);
+    gutil.log("[webpack]", stats.toString({}));
+    cb();
+  });
+});
+
+gulp.task('webpack:watch', ['static:build'], function (cb) {
+
+  var server = new WebpackDevServer(webpack(webpackConfig), {
+    contentBase: __dirname + '/tmp',
+    hot: true
+  });
+
+  server.listen(8080, 'localhost', function (err) {
+    if (err) throw new gutil.PluginError('webpack-dev-server', err);
+    gutil.log('[webpack-dev-server]', 'http://localhost:8080/webpack-dev-server/index.html');
+    cb();
+  });
+});
+
 gulp.task('script:build', function() {
   return gulp.src(paths.appScripts).pipe(babel({
         blacklist: ['regenerator', 'es6.templateLiterals'],
@@ -34,26 +89,14 @@ gulp.task('script:build', function() {
     .pipe(gulp.dest(paths.build));
 });
 
-gulp.task('static:build', function () {
-  var jsBowerDepends = [
-    'assets/bower_components/scrollreveal/dist/scrollReveal.min.js'
-  ];
-  gulp.src(jsBowerDepends)
-    .pipe(gulp.dest(paths.tmp + '/js'));
-
-  gulp.src(['assets/js/**/*'])
-    .pipe(gulp.dest(paths.tmp + '/js'));
-
+gulp.task('static:build', ['webpack:build'], function () {
   gulp.src(['assets/css/**/*'])
     .pipe(sass().on('error', sass.logError))
     .pipe(gulp.dest(paths.tmp + '/css'));
-
   gulp.src(['assets/**/*.html'])
     .pipe(gulp.dest(paths.tmp));
-
   gulp.src(['assets/img/**/*'])
     .pipe(gulp.dest(paths.tmp + '/img'));
-
 });
 
 gulp.task('static:release', ['static:build'], function () {
@@ -86,27 +129,14 @@ gulp.task('static:release', ['static:build'], function () {
 
 gulp.task('build', ['static:release', 'script:build']);
 
-gulp.task('watch', ['build'], function () {
-  gulp.watch(paths.appScripts, ['script:build']);
-  gulp.watch(paths.assets, ['static:release']);
-});
-
 gulp.task('watch:static', ['static:build'], function () {
   bsync.init({
     files: paths.tmp,
     server: {
       baseDir: paths.tmp,
-      directory: true
+      //directory: true
     }
   });
   gulp.watch(paths.assets, ['static:build']);
-  //gulp.watch(paths.tmp + '**', bsync.reload).on('all', function (e) {
-  //  console.log(e.type);
-  //})
 });
 
-gulp.task('bsync-server', function () {
-  bsync.init({
-    proxy: 'localhost:3000'
-  });
-});
